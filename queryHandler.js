@@ -1,12 +1,11 @@
-const { CohereClient } = require("cohere-ai");
-const index = require("./pineconeClient.js");
-const dotenv = require("dotenv");
-
+import { CohereClient } from "cohere-ai";
+import { index } from "./pineconeClient.js";
+import dotenv from "dotenv";
 dotenv.config();
 
 const cohere = new CohereClient({ token: process.env.COHERE_API_KEY });
 
-async function queryPinecone(userQuery) {
+export async function queryPinecone(userQuery) {
   const embedRes = await cohere.embed({
     texts: [userQuery],
     model: "embed-english-v3.0",
@@ -24,5 +23,3 @@ async function queryPinecone(userQuery) {
 
   return queryRes.matches.map((match) => match.metadata);
 }
-
-module.exports = { queryPinecone };

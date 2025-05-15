@@ -1,10 +1,10 @@
-const express = require("express");
-const queryPinecone = require("./queryHandler.js");
+import express from "express";
+import { queryPinecone } from "./queryHandler.js";
 const app = express();
 const PORT = process.env.PORT || 3000;
-const bodyParser = require("body-parser");
-const dotenv = require("dotenv");
-const cors = require("cors");
+import bodyParser from "body-parser";
+import dotenv from "dotenv";
+import cors from "cors";
 
 dotenv.config();
 app.use(express.json());
