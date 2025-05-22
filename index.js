@@ -15,35 +15,107 @@ app.use(
 /* Middleware */
 app.use(express.json());
 
-app.post("/vapi-query", async (req, res) => {
-  console.log("🔍 Incoming request body:", req.body);
+// app.use((req, res, next) => {
+//   let raw = "";
+//   req.on("data", (chunk) => {
+//     raw += chunk;
+//   });
+//   req.on("end", () => {
+//     console.log("🔍 RAW BODY:", raw);
+//     next();
+//   });
+// });
 
+// app.post("/vapi-query", async (req, res) => {
+//   console.log("🔍 Incoming request body:", req.body);
+
+//   let userQuery;
+
+//   try {
+//     // Handle tool call format
+//     if (req.body?.arguments) {
+//       const parsedArgs = JSON.parse(req.body.arguments);
+//       userQuery = parsedArgs.query || parsedArgs.question;
+//     }
+
+//     // Handle raw query or question formats
+//     if (!userQuery) {
+//       userQuery = req.body.query || req.body.question;
+//     }
+
+//     if (!userQuery) {
+//       console.warn(
+//         "❌ No query found in request:",
+//         JSON.stringify(req.body, null, 2)
+//       );
+//       return res.status(400).json({ error: "Missing query in request body" });
+//     }
+
+//     const results = await queryPinecone(userQuery);
+//     return res.json({ context: results });
+//   } catch (err) {
+//     console.error("❌ Failed to handle /vapi-query:", err);
+//     return res.status(500).json({ error: "Internal server error" });
+//   }
+// });
+
+app.post("/vapi-query", async (req, res) => {
   let userQuery;
 
   try {
-    // Handle tool call format
-    if (req.body?.arguments) {
-      const parsedArgs = JSON.parse(req.body.arguments);
-      userQuery = parsedArgs.query || parsedArgs.question;
+    // If toolCalls exist, extract directly from the object
+    const toolArgs = req.body?.message?.toolCalls?.[0]?.function?.arguments;
+    if (toolArgs?.query) {
+      userQuery = toolArgs.query;
     }
 
-    // Handle raw query or question formats
+    // Optional: fallback if query was passed outside of toolCalls
     if (!userQuery) {
       userQuery = req.body.query || req.body.question;
     }
 
     if (!userQuery) {
-      console.warn(
-        "❌ No query found in request:",
-        JSON.stringify(req.body, null, 2)
-      );
+      console.warn("❌ No valid query found in request body.");
       return res.status(400).json({ error: "Missing query in request body" });
+    }
+    function truncate(text = "", limit = 500) {
+      return text.length > limit ? text.slice(0, limit) + "..." : text;
     }
 
     const results = await queryPinecone(userQuery);
-    return res.json({ context: results });
+
+    const updatedResults = results.map((meta, index) => {
+      const summary = `Product ${index + 1}:
+Title: ${meta.title}
+Price: ${meta.price}
+URL: ${meta.url}
+Description: ${truncate(meta.description)}
+`;
+
+      return {
+        id: meta.id || `product-${index}`,
+        title: meta.title,
+        url: meta.url,
+        price: meta.price,
+        description: meta.description,
+        specifications: meta.specifications,
+        productInfo: meta.productInfo,
+        sample: meta.sample,
+        summary,
+      };
+    });
+    console.log(
+      "📦 Final data sent to Vapi:\n",
+      JSON.stringify({ context: { products: updatedResults } }, null, 2)
+    );
+
+    return res.status(200).json({
+      context: {
+        products: updatedResults,
+      },
+    });
   } catch (err) {
-    console.error("❌ Failed to handle /vapi-query:", err);
+    console.error("❌ Error processing /vapi-query:", err.message);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

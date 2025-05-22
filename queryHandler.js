@@ -21,5 +21,14 @@ export async function queryPinecone(userQuery) {
     includeMetadata: true,
   });
 
-  return queryRes.matches.map((match) => match.metadata);
+  console.log(queryRes.matches);
+  return queryRes.matches.map((match) => ({
+    title: match.metadata.title,
+    url: match.metadata.url,
+    price: match.metadata.price,
+    productInfo: match.metadata.productInfo,
+    description: match.metadata.description,
+    sample: match.metadata.sample,
+    specifications: match.metadata.specifications,
+  }));
 }
