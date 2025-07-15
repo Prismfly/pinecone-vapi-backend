@@ -1,5 +1,6 @@
 import express from "express";
 import { queryPinecone } from "./queryHandler.js";
+// import { mcpQuery } from "./mcpHandler.js";
 const app = express();
 const PORT = process.env.PORT || 3001;
 import dotenv from "dotenv";
@@ -14,6 +15,8 @@ app.use(
 
 /* Middleware */
 app.use(express.json());
+
+const sessionMap = new Map();
 
 app.post("/vapi-query", async (req, res) => {
   let userQuery;
