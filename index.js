@@ -114,7 +114,7 @@ app.post("/vapi-webhook", async (req, res) => {
       const callId = message?.call?.id;
       const now = Date.now();
 
-      console.log("Generated clientId:", clientId);
+      console.log("Generated clientId:", incomingClientId);
 
       if (!incomingClientId) {
         console.warn("❌ Missing clientId in webhook payload.");
