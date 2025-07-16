@@ -105,31 +105,29 @@ app.post("/vapi-webhook", async (req, res) => {
       console.warn("⚠️ Invalid signature from Vapi:", receivedSig);
       return res.status(401).send("Unauthorized");
     }
-    const { message } = req.body;
+    const { message, clientId: incomingClientId } = req.body;
 
     if (
       message?.type === "status-update" &&
       message?.status === "in-progress"
     ) {
       const callId = message?.call?.id;
-      const clientId = uuidv4();
       const now = Date.now();
 
       console.log("Generated clientId:", clientId);
 
-      // Make sure callId exists
-      if (!callId) {
-        console.warn("❌ No call ID found in in-progress event.");
-        return res.status(400).send("Missing call ID");
+      if (!incomingClientId) {
+        console.warn("❌ Missing clientId in webhook payload.");
+        return res.status(400).send("Missing client ID");
       }
 
-      sessionMap.set(callId, { start: now, clientId });
+      sessionMap.set(callId, { start: now, clientId: incomingClientId });
 
-      await sendGA4Event(clientId, "pf_voice_start_call", {
+      await sendGA4Event(incomingClientId, "pf_voice_start_call", {
         start_time_unix: Math.floor(now / 1000),
         debug_mode: true,
       });
-      console.log(`Call started: ${callId}`);
+      console.log(`Call started: ${callId}, clientId: ${incomingClientId}`);
     }
 
     res.status(200).send("Webhook received");
