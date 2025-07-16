@@ -96,38 +96,57 @@ app.post("/vapi-query", async (req, res) => {
   }
 });
 
+const sessionClientMap = new Map();
+
+app.post("/store-client-id", (req, res) => {
+  const { sessionId, clientId } = req.body;
+
+  if (!sessionId || !clientId) {
+    return res.status(400).send("Missing sessionId or clientId");
+  }
+
+  sessionClientMap.set(sessionId, clientId);
+  console.log(`Stored clientId ${clientId} for session ${sessionId}`);
+  res.status(200).send("Client ID stored");
+});
+
 const signature = process.env.VAPI_SECRET_TOKEN;
 
 app.post("/vapi-webhook", async (req, res) => {
   try {
     const receivedSig = req.headers["x-vapi-signature"];
     if (receivedSig !== signature) {
-      console.warn("⚠️ Invalid signature from Vapi:", receivedSig);
       return res.status(401).send("Unauthorized");
     }
-    const { message, clientId: incomingClientId } = req.body;
+
+    const { message } = req.body;
 
     if (
       message?.type === "status-update" &&
       message?.status === "in-progress"
     ) {
       const callId = message?.call?.id;
+      const sessionId = message?.call?.metaData?.sessionId;
       const now = Date.now();
 
-      console.log("Generated clientId:", incomingClientId);
-
-      if (!incomingClientId) {
-        console.warn("❌ Missing clientId in webhook payload.");
-        return res.status(400).send("Missing client ID");
+      if (!callId || !sessionId) {
+        return res.status(400).send("Missing call ID or session ID");
       }
 
-      sessionMap.set(callId, { start: now, clientId: incomingClientId });
+      const clientId = sessionClientMap.get(sessionId);
 
-      await sendGA4Event(incomingClientId, "pf_voice_start_call", {
+      if (!clientId) {
+        console.warn("❌ No clientId found for sessionId:", sessionId);
+        return res.status(400).send("Missing client ID for session");
+      }
+
+      sessionMap.set(callId, { start: now, clientId });
+
+      await sendGA4Event(clientId, "pf_voice_start_call", {
         start_time_unix: Math.floor(now / 1000),
-        debug_mode: true,
       });
-      console.log(`Call started: ${callId}, clientId: ${incomingClientId}`);
+
+      console.log(`Call started: ${callId}, clientId: ${clientId}`);
     }
 
     res.status(200).send("Webhook received");
