@@ -15,12 +15,12 @@ export async function sendGA4Event(clientId, eventName, params = {}) {
         events: [
           {
             name: eventName,
-            params,
+            params: params,
           },
         ],
       }
     );
-    return res.data;
+    console.log(res);
   } catch (error) {
     console.error("GA4 event failed:", error?.response?.data || error.message);
   }
