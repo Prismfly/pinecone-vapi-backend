@@ -1,9 +1,12 @@
 import express from "express";
 import { queryPinecone } from "./queryHandler.js";
+// import { mcpQuery } from "./mcpHandler.js";
 const app = express();
 const PORT = process.env.PORT || 3001;
 import dotenv from "dotenv";
 import cors from "cors";
+import { sendGA4Event } from "./sendGA4Event.js";
+import { v4 as uuidv4 } from "uuid";
 
 dotenv.config();
 app.use(
@@ -14,6 +17,8 @@ app.use(
 
 /* Middleware */
 app.use(express.json());
+
+const sessionMap = new Map();
 
 app.post("/vapi-query", async (req, res) => {
   let userQuery;
@@ -88,6 +93,49 @@ app.post("/vapi-query", async (req, res) => {
   } catch (err) {
     console.error("❌ Error processing /vapi-query:", err.message);
     return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const signature = process.env.VAPI_SECRET_TOKEN;
+
+app.post("/vapi-webhook", async (req, res) => {
+  try {
+    const receivedSig = req.headers["x-vapi-signature"];
+    if (receivedSig !== signature) {
+      console.warn("⚠️ Invalid signature from Vapi:", receivedSig);
+      return res.status(401).send("Unauthorized");
+    }
+    const { message } = req.body;
+
+    if (
+      message?.type === "status-update" &&
+      message?.status === "in-progress"
+    ) {
+      const callId = message?.call?.id;
+      const clientId = uuidv4();
+      const now = Date.now();
+
+      console.log("Generated clientId:", clientId);
+
+      // Make sure callId exists
+      if (!callId) {
+        console.warn("❌ No call ID found in in-progress event.");
+        return res.status(400).send("Missing call ID");
+      }
+
+      sessionMap.set(callId, { start: now, clientId });
+
+      await sendGA4Event(clientId, "pf_voice_start_call", {
+        start_time_unix: Math.floor(now / 1000),
+        debug_mode: true,
+      });
+      console.log(`Call started: ${callId}`);
+    }
+
+    res.status(200).send("Webhook received");
+  } catch (err) {
+    console.error("Webhook error:", err.message);
+    res.status(500).send("Internal Server Error");
   }
 });
 
