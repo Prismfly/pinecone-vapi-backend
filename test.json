@@ -1,0 +1,44 @@
+Webhook message received: {
+  "timestamp": 1752786716498,
+  "type": "status-update",
+  "status": "in-progress",
+  "artifact": {
+    "messages": [
+      {
+        "role": "system",
+        "message": "Behavior Rules\n\t1.\tAlways Derive Responses from Function Tool Only\nAll information you provide must come directly from the results returned by the tile_club_function_tool.\nYou must not use external memory, training knowledge, or make assumptions. Never guess.\n\t2.\tReferencing Products\n\t•\tOnly mention product titles that exist in the title fields of the product objects within the result array.\n\t•\tIf the customer asks about a product not in that list, say:\n“I wasn’t able to find that product. Can you please ask about a product from the available list?”\n\t3.\tTone and Voice\n\t•\tBe very friendly, helpful, and conversational.\n\t•\tUse positive language and always acknowledge the caller’s question before answering, e.g.,\n“That’s a great question!” or “Let me get that information for you.”\n\t•\tAsk gentle follow-up questions to see if the user likes the product you recommend.\n\t4.\tEnding the Conversation\n\t•\tThank the caller before ending the call.\n\t•\tAlways say goodbye politely.\n\t•\tIf the caller is si...",
+        "time": 1752786712777,
+        "secondsFromStart": 0
+      }
+    ],
+    "messagesOpenAIFormatted": [
+      {
+        "role": "system",
+        "content": "Behavior Rules\n\t1.\tAlways Derive Responses from Function Tool Only\nAll information you provide must come directly from the results returned by the tile_club_function_tool.\nYou must not use external memory, training knowledge, or make assumptions. Never guess.\n\t2.\tReferencing Products\n\t•\tOnly mention product titles that exist in the title fields of the product objects within the result array.\n\t•\tIf the customer asks about a product not in that list, say:\n“I wasn’t able to find that product. Can you please ask about a product from the available list?”\n\t3.\tTone and Voice\n\t•\tBe very friendly, helpful, and conversational.\n\t•\tUse positive language and always acknowledge the caller’s question before answering, e.g.,\n“That’s a great question!” or “Let me get that information for you.”\n\t•\tAsk gentle follow-up questions to see if the user likes the product you recommend.\n\t4.\tEnding the Conversation\n\t•\tThank the caller before ending the call.\n\t•\tAlways say goodbye politely.\n\t•\tIf the caller is si..."
+      }
+    ]
+  },
+  "call": {
+    "id": "ba818afb-3e28-4793-814f-ba30e2c7d552",
+    "orgId": "96f15c2c-1f78-49c8-b67d-c01745c47e95",
+    "createdAt": "2025-07-17T21:11:52.611Z",
+    "updatedAt": "2025-07-17T21:11:52.611Z",
+    "type": "webCall",
+    "monitor": {
+      "listenUrl": "wss://phone-call-websocket.aws-us-west-2-backend-production1.vapi.ai/ba818afb-3e28-4793-814f-ba30e2c7d552/listen",
+      "controlUrl": "https://phone-call-websocket.aws-us-west-2-backend-production1.vapi.ai/ba818afb-3e28-4793-814f-ba30e2c7d552/control"
+    },
+    "transport": {
+      "provider": "daily",
+      "assistantVideoEnabled": false,
+      "callUrl": "https://vapi.daily.co/SSHqCDxJipXThC4j4fuk"
+    },
+    "webCallUrl": "https://vapi.daily.co/SSHqCDxJipXThC4j4fuk",
+    "status": "queued",
+    "assistantId": "32018710-61e6-4bda-83c0-e718510ebe0b",
+    "assistantOverrides": {
+      "variableValues": {
+        "sessionId": "12d00f9a-c3f7-4ec3-8af2-50b4403bbf4a"
+      }
+    }
+  },

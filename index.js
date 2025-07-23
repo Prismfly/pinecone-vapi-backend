@@ -106,7 +106,9 @@ app.post("/store-client-id", (req, res) => {
   }
 
   sessionClientMap.set(sessionId, clientId);
-  console.log(`Stored clientId ${clientId} for session ${sessionId}`);
+  console.log(`✅ Stored: ${sessionId} => ${clientId}`);
+
+  console.log(sessionClientMap);
   res.status(200).send("Client ID stored");
 });
 
@@ -115,24 +117,31 @@ const signature = process.env.VAPI_SECRET_TOKEN;
 app.post("/vapi-webhook", async (req, res) => {
   try {
     const receivedSig = req.headers["x-vapi-signature"];
+
     if (receivedSig !== signature) {
       return res.status(401).send("Unauthorized");
     }
 
-    const { message } = req.body;
+    const outer = req.body;
+    const message = outer.message;
 
     if (
       message?.type === "status-update" &&
       message?.status === "in-progress"
     ) {
+      console.log("🚀 Got status-update:in-progress");
       const callId = message?.call?.id;
-      const sessionId = message?.call?.metaData?.sessionId;
+      const sessionId =
+        message?.call?.assistantOverrides.variableValues?.sessionId;
       const now = Date.now();
 
       if (!callId || !sessionId) {
         return res.status(400).send("Missing call ID or session ID");
       }
 
+      console.log("🎉🎉", sessionId);
+      console.log("🔍 Checking sessionId:", sessionId);
+      console.log("📦 Current sessionClientMap:", sessionClientMap);
       const clientId = sessionClientMap.get(sessionId);
 
       if (!clientId) {
@@ -144,9 +153,10 @@ app.post("/vapi-webhook", async (req, res) => {
 
       await sendGA4Event(clientId, "pf_voice_start_call", {
         start_time_unix: Math.floor(now / 1000),
+        debug_mode: true,
       });
 
-      console.log(`Call started: ${callId}, clientId: ${clientId}`);
+      console.log(`✅ Sent GA4 event for call: ${callId}`);
     }
 
     res.status(200).send("Webhook received");
