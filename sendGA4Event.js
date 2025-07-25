@@ -27,10 +27,6 @@ export async function sendGA4Event(clientId, eventName, params = {}) {
       payload,
       { headers: { "Content-Type": "application/json" } }
     );
-    console.log("📨 Received webhook:", JSON.stringify(payload, null, 2));
-    console.log("✅ GA4 event sent:", eventName);
-    console.log("📦 Payload:", JSON.stringify(payload, null, 2));
-    console.log("🔁 Response:", res.status, res.statusText);
   } catch (error) {
     console.error("❌ GA4 event failed:", error?.response?.data);
   }
