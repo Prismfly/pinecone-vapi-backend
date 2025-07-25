@@ -106,9 +106,7 @@ app.post("/store-client-id", (req, res) => {
   }
 
   sessionClientMap.set(sessionId, clientId);
-  console.log(`✅ Stored: ${sessionId} => ${clientId}`);
 
-  console.log(sessionClientMap);
   res.status(200).send("Client ID stored");
 });
 
@@ -129,7 +127,6 @@ app.post("/vapi-webhook", async (req, res) => {
       message?.type === "status-update" &&
       message?.status === "in-progress"
     ) {
-      console.log("🚀 Got status-update:in-progress");
       const callId = message?.call?.id;
       const sessionId =
         message?.call?.assistantOverrides.variableValues?.sessionId;
@@ -139,8 +136,6 @@ app.post("/vapi-webhook", async (req, res) => {
         return res.status(400).send("Missing call ID or session ID");
       }
 
-      console.log("🎉🎉", sessionId);
-      console.log("🔍 Checking sessionId:", sessionId);
       console.log("📦 Current sessionClientMap:", sessionClientMap);
       const clientId = sessionClientMap.get(sessionId);
 
@@ -151,12 +146,36 @@ app.post("/vapi-webhook", async (req, res) => {
 
       sessionMap.set(callId, { start: now, clientId });
 
-      await sendGA4Event(clientId, "pf_voice_start_call", {
-        start_time_unix: Math.floor(now / 1000),
+      setTimeout(async () => {
+        await sendGA4Event(clientId, "pf_voice_start_call", {
+          start_time_unix: Math.floor(now / 1000),
+          debug_mode: true,
+        });
+      }, 2000);
+
+      console.log(`✅ Sent GA4 event for call: ${callId}`);
+    }
+
+    if (message?.type === "status-update" && message?.status === "ended") {
+      const callId = message?.call?.id;
+      const now = Date.now();
+
+      const sessionData = sessionMap.get(callId);
+      if (!sessionData) {
+        console.warn("❌ No session data found for callId:", callId);
+        return res.status(400).send("Missing session data");
+      }
+
+      const { start, clientId } = sessionData;
+      const duration = Math.floor((now - start) / 1000); // in seconds
+
+      await sendGA4Event(clientId, "pf_voice_end_call", {
+        call_duration_seconds: duration,
+        end_time_unix: Math.floor(now / 1000),
         debug_mode: true,
       });
 
-      console.log(`✅ Sent GA4 event for call: ${callId}`);
+      console.log(`✅ Sent GA4 end event for call: ${callId} (${duration}s)`);
     }
 
     res.status(200).send("Webhook received");

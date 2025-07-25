@@ -7,6 +7,7 @@ const measurementId = process.env.GA4_MEASUREMENT_ID;
 const ga4Secret = process.env.GA4_API_SECRET;
 
 export async function sendGA4Event(clientId, eventName, params = {}) {
+  console.log("👣 Entered sendGA4Event");
   const payload = {
     client_id: clientId,
     events: [
@@ -26,14 +27,11 @@ export async function sendGA4Event(clientId, eventName, params = {}) {
       payload,
       { headers: { "Content-Type": "application/json" } }
     );
-    console.log("📨 Received webhook:", JSON.stringify(message, null, 2));
+    console.log("📨 Received webhook:", JSON.stringify(payload, null, 2));
     console.log("✅ GA4 event sent:", eventName);
     console.log("📦 Payload:", JSON.stringify(payload, null, 2));
     console.log("🔁 Response:", res.status, res.statusText);
   } catch (error) {
-    console.error(
-      "❌ GA4 event failed:",
-      error?.response?.data || error.message
-    );
+    console.error("❌ GA4 event failed:", error?.response?.data);
   }
 }
