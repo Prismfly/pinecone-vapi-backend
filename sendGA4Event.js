@@ -7,7 +7,6 @@ const measurementId = process.env.GA4_MEASUREMENT_ID;
 const ga4Secret = process.env.GA4_API_SECRET;
 
 export async function sendGA4Event(clientId, eventName, params = {}) {
-  console.log("👣 Entered sendGA4Event");
   const payload = {
     client_id: clientId,
     events: [
