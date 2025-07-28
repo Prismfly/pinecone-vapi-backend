@@ -136,7 +136,6 @@ app.post("/vapi-webhook", async (req, res) => {
         return res.status(400).send("Missing call ID or session ID");
       }
 
-      console.log("📦 Current sessionClientMap:", sessionClientMap);
       const clientId = sessionClientMap.get(sessionId);
 
       if (!clientId) {
@@ -152,8 +151,6 @@ app.post("/vapi-webhook", async (req, res) => {
           debug_mode: true,
         });
       }, 2000);
-
-      console.log(`✅ Sent GA4 event for call: ${callId}`);
     }
 
     if (message?.type === "status-update" && message?.status === "ended") {
@@ -167,15 +164,21 @@ app.post("/vapi-webhook", async (req, res) => {
       }
 
       const { start, clientId } = sessionData;
-      const duration = Math.floor((now - start) / 1000); // in seconds
+      const duration = Math.floor((now - start) / 1000);
 
       await sendGA4Event(clientId, "pf_voice_end_call", {
-        call_duration_seconds: duration,
         end_time_unix: Math.floor(now / 1000),
         debug_mode: true,
       });
 
-      console.log(`✅ Sent GA4 end event for call: ${callId} (${duration}s)`);
+      await sendGA4Event(clientId, "pf_voice_call_duration", {
+        call_duration_seconds: duration,
+        start_time_unix: Math.floor(start / 1000),
+        end_time_unix: Math.floor(now / 1000),
+        debug_mode: true,
+      });
+
+      sessionMap.delete(callId);
     }
 
     res.status(200).send("Webhook received");
