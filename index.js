@@ -1,12 +1,10 @@
 import express from "express";
 import { queryPinecone } from "./queryHandler.js";
-// import { mcpQuery } from "./mcpHandler.js";
 const app = express();
 const PORT = process.env.PORT || 3001;
 import dotenv from "dotenv";
 import cors from "cors";
 import { sendGA4Event } from "./sendGA4Event.js";
-import { v4 as uuidv4 } from "uuid";
 
 dotenv.config();
 app.use(
@@ -19,6 +17,7 @@ app.use(
 app.use(express.json());
 
 const sessionMap = new Map();
+const clients = new Map();
 
 app.post("/vapi-query", async (req, res) => {
   let userQuery;
@@ -32,7 +31,7 @@ app.post("/vapi-query", async (req, res) => {
       userQuery = toolArgs.query;
     }
 
-    // Optional: fallback if query was passed outside of toolCalls
+    // Fallback if query was passed outside of toolCalls (for testing purposes within Vapi)
     if (!userQuery) {
       userQuery = req.body.query || req.body.question;
     }
@@ -41,6 +40,14 @@ app.post("/vapi-query", async (req, res) => {
       console.warn("❌ No valid query or toolCallId found in request body.");
       return res.status(400).json({ error: "Missing query in request body" });
     }
+
+    const sessionId =
+      req.body?.message?.call?.metaData?.sessionId ||
+      req.body?.message?.call?.metadata?.sessionId ||
+      req.body?.sessionId ||
+      req.query?.sessionId ||
+      null;
+
     function truncate(text = "", limit = 500) {
       return text.length > limit ? text.slice(0, limit) + "..." : text;
     }
@@ -69,10 +76,59 @@ app.post("/vapi-query", async (req, res) => {
             p.description
           )}, ${cleanInfo}`;
         })
-        .join(" | "); // separates each product
+        .join(" | ");
     }
 
     const formattedResult = formatProductsForVapi(productArray);
+
+    const toNumber = (val) => {
+      if (typeof val !== "string") return typeof val === "number" ? val : null;
+      const m = val.match(/[\d.,]+/);
+      return m ? Number(m[0].replace(/,/g, "")) : null;
+    };
+
+    const looksLikePages =
+      productArray.length > 0 &&
+      productArray.every(
+        (p) => (p.url && /\/pages\//.test(p.url)) || p.price === "N/A"
+      );
+
+    // UI payloads
+    let uiPayload;
+    if (!looksLikePages) {
+      uiPayload = {
+        intent: "PRODUCT_RECS",
+        sessionId,
+        source: "vapi",
+        items: productArray.map((p) => ({
+          title: p.title,
+          price: toNumber(p.price),
+          priceFormatted:
+            toNumber(p.price) != null
+              ? `$${toNumber(p.price).toFixed(2)}`
+              : null,
+          blurb: p.description,
+          url: p.url || null,
+        })),
+      };
+    } else {
+      const first = productArray[0] || {};
+      uiPayload = {
+        intent: "PAGE_INFO",
+        sessionId,
+        source: "vapi",
+        title: first.title || "Info",
+        url: first.url || "",
+      };
+    }
+
+    if (sessionId && typeof pushUIAction === "function") {
+      try {
+        pushUIAction(sessionId, uiPayload);
+      } catch (e) {
+        console.warn("⚠️ pushUIAction failed:", e.message);
+      }
+    }
 
     const response = {
       results: [
@@ -95,6 +151,38 @@ app.post("/vapi-query", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+app.get("/events", (req, res) => {
+  const sessionId = req.query.sessionId;
+  if (!sessionId) return res.status(400).end("Missing sessionId");
+
+  res.set({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  res.flushHeaders();
+
+  res.write("retry: 5000\n\n");
+
+  if (!clients.has(sessionId)) clients.set(sessionId, new Set());
+  clients.get(sessionId).add(res);
+
+  const hb = setInterval(() => res.write(": ping\n\n"), 25000);
+
+  req.on("close", () => {
+    clients.get(sessionId)?.delete(res);
+    if (clients.get(sessionId)?.size === 0) clients.delete(sessionId);
+  });
+});
+
+// Helper to send payloads to connected browsers
+function pushUIAction(sessionId, payload) {
+  const listeners = clients.get(sessionId);
+  if (!listeners) return;
+  const data = `data: ${JSON.stringify(payload)}\n\n`;
+  for (const r of listeners) r.write(data);
+}
 
 const sessionClientMap = new Map();
 
@@ -191,3 +279,5 @@ app.post("/vapi-webhook", async (req, res) => {
 app.listen(process.env.PORT, () =>
   console.log(`✅ Server listening on port ${PORT}`)
 );
+
+export { pushUIAction };

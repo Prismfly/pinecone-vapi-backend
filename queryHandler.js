@@ -17,7 +17,7 @@ export async function queryPinecone(userQuery) {
 
   const queryRes = await index.query({
     vector: embedding,
-    topK: 5,
+    topK: 3,
     includeMetadata: true,
   });
 
